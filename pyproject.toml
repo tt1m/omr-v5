@@ -5,6 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "imutils>=0.5.4",
     "opencv-python>=4.13.0.92",
+    "pillow>=12.2.0",
     "pydantic>=2.13.4",
 ]
