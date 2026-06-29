@@ -9,4 +9,5 @@ dependencies = [
     "opencv-python>=4.13.0.92",
     "pillow>=12.2.0",
     "pydantic>=2.13.4",
+    "scikit-learn>=1.9.0",
 ]

@@ -62,7 +62,29 @@ def draw_template(img, template_path):
                     point_top_left = (x, y)
                     point_bottom_right = (x + bubble_width, y + bubble_height)
                     cv2.rectangle(img, point_top_left, point_bottom_right, (255,255,0), 3)
-
-        
+                    
     print_image(img)
+    
+def get_template_bubble_centers(template_path):
+    bubble_centers = []
+
+    with open(template_path, 'r', encoding="utf-8") as file:
+      template = json.load(file)
+
+    fields = template["fields"]
+    for field in fields:
+        bubble_config = field["bubble"]
+        bubble_shape = bubble_config["shape"]
+        bubble_width = bubble_config["width"]
+        bubble_height = bubble_config["height"]
         
+        entries = field["entries"]
+        for entry in entries:
+            bubbles = entry["bubbles"]
+            if bubble_shape == "rectangle":
+                for bubble in bubbles:
+                    x = bubble["x"]
+                    y = bubble["y"]
+                    bubble_centers.append((x + bubble_width // 2, y + bubble_height // 2)) 
+    
+    return np.array(bubble_centers, dtype=np.float32)
