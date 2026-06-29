@@ -56,8 +56,7 @@ def scan(img, final_w=2480, final_h=3508):
         # OPTIMIZATION: Compute bounding box once and cache it
         x, y, w, h = cv2.boundingRect(cnt)
         ar = w / h
-        
-        # FIX: Relaxed aspect ratio lower bound so valid bubbles aren't instantly dropped
+
         if len(approx) != 4 or ar < 0.7 or ar > 4:
             continue
         
@@ -68,7 +67,7 @@ def scan(img, final_w=2480, final_h=3508):
     # Keeping your exact double-pass logic intact as requested
     external_contours, _ = cv2.findContours(contours_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cv2.drawContours(external_contours_mask, external_contours, -1, (255,255,255), 2)
-    print_image(external_contours_mask)
+    # print_image(external_contours_mask)
     
     # OPTIMIZATION: Extract bounding boxes directly without a redundant secondary loop computation
     rectangles = []
