@@ -53,7 +53,9 @@ AnyField = Annotated[
 ]
 
 # ── Root template ────────────────────────────────────────────────
-class ExamSheetTemplate(BaseModel):
+class OMRTemplate(BaseModel):
     name: str
     image: ImageDimensions
     fields: list[AnyField] = Field(min_length=1)
+
+print(OMRTemplate.model_json_schema())
