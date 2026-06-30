@@ -2,6 +2,7 @@ from utils import get_template_bubble_centers, print_image, draw_contours
 import cv2
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
+import json
 
 def match_and_estimate_affine(detected_pts, template_pts, max_distance=50.0):
     det = np.array(detected_pts, dtype=np.float32)
@@ -77,8 +78,8 @@ def scan(img, final_w=2480, final_h=3508):
         
     return np.array(rectangles, dtype=np.float32)
 
-def get_bubble_coordinates(img, template_path):     
-    template_pts = get_template_bubble_centers(template_path)
+def get_bubble_coordinates(img, template):     
+    template_pts = get_template_bubble_centers(template)
     detected_pts = scan(img)
          
     if len(detected_pts) > 0:
@@ -95,6 +96,8 @@ def get_bubble_coordinates(img, template_path):
 if __name__ == "__main__":
     template_path = "./templates/CMS_mc_template.json"
     img_path = "./samples/scans/2B_11.png"
+
+    template = json.load(open(template_path, "r", encoding="utf-8"))
     
     img = cv2.imread(img_path)
-    print(get_bubble_coordinates(img, template_path))
+    print(get_bubble_coordinates(img, template))

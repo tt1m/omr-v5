@@ -41,10 +41,7 @@ def fix_coords(coordinates):
 
     return fixed_coordinates
 
-def draw_template(img, template_path):
-    with open(template_path, 'r', encoding="utf-8") as file:
-      template = json.load(file)
-
+def draw_template(img, template):
     fields = template["fields"]
     for field in fields:
         bubble_config = field["bubble"]
@@ -65,11 +62,8 @@ def draw_template(img, template_path):
                     
     print_image(img)
     
-def get_template_bubble_centers(template_path):
+def get_template_bubble_centers(template):
     bubble_centers = []
-
-    with open(template_path, 'r', encoding="utf-8") as file:
-      template = json.load(file)
 
     fields = template["fields"]
     for field in fields:
