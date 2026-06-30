@@ -50,21 +50,19 @@ def sample_fill(cleaned: np.ndarray, cx: float, cy: float,
     return float(np.count_nonzero(roi)) / roi.size
 
 # Generate answer key
-def generate_answer_key(img, bubble_coordinates, template, fill_threshold=0.55, final_w=2480, final_h=3508):
+def generate_answer_key(img, bubble_coordinates, index, fill_threshold=0.75, final_w=2480, final_h=3508):
     # ── 1. Preprocess (your existing pipeline) ───────────────────
     img    = cv2.resize(img, (final_w, final_h))
     gray   = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    thresh  = cv2.adaptiveThreshold(
-        blurred, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,
-        11, 2
+    _, thresh = cv2.threshold(
+        blurred, 0, 255, 
+        cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
     )
     kernel  = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
     cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
 
     # ── 2. Build template index ──────────────────────────────────
-    index = build_bubble_index(template)
 
     # ── 3. Sample fill at every bubble position ──────────────────
     scores = {}
@@ -93,9 +91,9 @@ def generate_answer_key(img, bubble_coordinates, template, fill_threshold=0.55, 
 
 # ── Core grading ──────────────────────────────────────────────────
 
-def grading(img, bubble_coordinates, template,
+def grading(img, bubble_coordinates, index,
             answer_key: dict | None = None,
-            fill_threshold: float = 0.55,
+            fill_threshold: float = 0.75,
             final_w: int = 2480, final_h: int = 3508):
     """
     Parameters
@@ -122,16 +120,15 @@ def grading(img, bubble_coordinates, template,
     img    = cv2.resize(img, (final_w, final_h))
     gray   = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    thresh  = cv2.adaptiveThreshold(
-        blurred, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,
-        11, 2
+    _, thresh = cv2.threshold(
+        blurred, 0, 255, 
+        cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
     )
     kernel  = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
     cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
 
     # ── 2. Build template index ──────────────────────────────────
-    index = build_bubble_index(template)
+
 
     # ── 3. Sample fill at every bubble position ──────────────────
     metadata = {}
@@ -162,11 +159,12 @@ def grading(img, bubble_coordinates, template,
 
     for q, choices in metadata.items():
         filled = [v for v, f in choices if f >= fill_threshold]
+        joined = "".join(filled)
         # print(filled)
         if len(filled) == 0:
-            detected_metadata[q] = None # blank
+            detected_metadata[q] = "None" # blank
         else:
-            detected_metadata[q] = filled         
+            detected_metadata[q] = joined         
     
     # print(metadata)
     # print(detected_metadata)
@@ -200,8 +198,8 @@ def grading(img, bubble_coordinates, template,
 
 # ── Debug visualisation ───────────────────────────────────────────
 
-def debug_view(img, bubble_coordinates, template,
-               fill_threshold: float = 0.55,
+def debug_view(img, bubble_coordinates, index,
+               fill_threshold: float = 0.75,
                final_w: int = 2480, final_h: int = 3508):
     """
     Draws coloured rectangles on the cleaned image so you can
@@ -213,16 +211,15 @@ def debug_view(img, bubble_coordinates, template,
     img     = cv2.resize(img, (final_w, final_h))
     gray    = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    thresh  = cv2.adaptiveThreshold(
-        blurred, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,
-        11, 2
+    _, thresh = cv2.threshold(
+        blurred, 0, 255, 
+        cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
     )
     kernel  = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
     cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
     vis     = cv2.cvtColor(cleaned, cv2.COLOR_GRAY2BGR)
-
-    index = build_bubble_index(template)
+    h, w = vis.shape[:2]
+    print(h,w)
 
     for (px, py), meta in zip(bubble_coordinates, index):
         cx, cy = int(round(px)), int(round(py))
@@ -268,26 +265,28 @@ def print_report(report: dict) -> None:
     print(f"{'─'*42}\n")
 
 
-def grading_wrapper(img, answer_key, template, fill_threshold=0.55):
+def grading_wrapper(img, answer_key, template, index, fill_threshold=0.75):
     bubble_coordinates = get_bubble_coordinates(img, template)
-    return grading(img, bubble_coordinates, template, answer_key, fill_threshold=fill_threshold)
+    return grading(img, bubble_coordinates, index, answer_key, fill_threshold=fill_threshold)
 
 
 # ── Entry point ───────────────────────────────────────────────────
 
 if __name__ == "__main__":
     template_path = "./templates/CMS_mc_template.json"
-    img_path      = "./samples/scans/2B_9.png"
+    img_path      = "./output/0_page_3.png"
     
     template = json.load(open(template_path, "r", encoding="utf-8"))
     img                = cv2.imread(img_path)
     bubble_coordinates = get_bubble_coordinates(img, template)
-    ANSWER_KEY = generate_answer_key(img, get_bubble_coordinates(img, template), template)
+    index = build_bubble_index(template)
+    ANSWER_KEY = generate_answer_key(img, get_bubble_coordinates(img, template), index)
+    print(ANSWER_KEY)
 
     # Normal grading run
-    report = grading(img, bubble_coordinates, template, ANSWER_KEY)
+    report = grading(img, bubble_coordinates, index, ANSWER_KEY)
     print_report(report)
     # print(report)
 
     # Uncomment to visualise fill detection before grading:
-    # debug_view(img, bubble_coordinates, template)
+    debug_view(img, bubble_coordinates, index)
