@@ -7,6 +7,7 @@
   "fields": [
     {
       "name": "Registration Number",
+      "type": "metadata",
       "bubble": {
         "shape": "rectangle",
         "width": 53,
@@ -237,6 +238,7 @@
     },
     {
       "name": "Class",
+      "type": "metadata",
       "bubble": {
         "shape": "rectangle",
         "width": 53,
@@ -302,6 +304,7 @@
     },
     {
       "name": "Class Number",
+      "type": "metadata",
       "bubble": {
         "shape": "rectangle",
         "width": 53,
@@ -392,6 +395,7 @@
     },
     {
       "name": "Subject Code",
+      "type": "metadata",
       "bubble": {
         "shape": "rectangle",
         "width": 53,
@@ -567,6 +571,7 @@
     },
     {
       "name": "1-25",
+      "type": "answers",
       "bubble": {
         "shape": "rectangle",
         "width": 48,
@@ -1202,6 +1207,7 @@
     },
     {
       "name": "26-50",
+      "type": "answers",
       "bubble": {
         "shape": "rectangle",
         "width": 48,
@@ -1837,6 +1843,7 @@
     },
     {
       "name": "51-75",
+      "type": "answers",
       "bubble": {
         "shape": "rectangle",
         "width": 48,

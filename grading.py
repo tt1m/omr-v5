@@ -4,9 +4,6 @@ import numpy as np
 from utils import print_image
 from scan_processing import get_bubble_coordinates
 
-ANSWER_FIELDS = {"1-25", "26-50", "51-75"}
-
-
 # ── Template index ────────────────────────────────────────────────
 
 def build_bubble_index(template: dict) -> list[dict]:
@@ -24,6 +21,7 @@ def build_bubble_index(template: dict) -> list[dict]:
                 index.append({
                     "field":    field["name"],
                     "question": entry["question"],
+                    "type":     field["type"],
                     "value":    bubble["value"],
                     "w":        bw,
                     "h":        bh,
@@ -72,7 +70,7 @@ def generate_answer_key(img, bubble_coordinates, template, fill_threshold=0.55, 
     scores = {}
 
     for (px, py), meta in zip(bubble_coordinates, index):
-        if meta["field"] not in ANSWER_FIELDS:
+        if meta["type"] != "answers":
             continue
         fill = sample_fill(cleaned, px, py, meta["w"], meta["h"])
         q    = meta["question"]
@@ -81,7 +79,7 @@ def generate_answer_key(img, bubble_coordinates, template, fill_threshold=0.55, 
     # ── 4. Pick answer per question ──────────────────────────────
     detected = {}
     for q, choices in scores.items():
-        print(f"Q{q}: " + "  ".join(f"{v}={f:.3f}" for v, f in choices))
+        # print(f"Q{q}: " + "  ".join(f"{v}={f:.3f}" for v, f in choices))
         filled = [v for v, f in choices if f >= fill_threshold]
         if len(filled) == 1:
             detected[q] = filled[0]
@@ -136,35 +134,51 @@ def grading(img, bubble_coordinates, template,
     index = build_bubble_index(template)
 
     # ── 3. Sample fill at every bubble position ──────────────────
+    metadata = {}
     scores = {}
 
     for (px, py), meta in zip(bubble_coordinates, index):
-        if meta["field"] not in ANSWER_FIELDS:
-            continue
         fill = sample_fill(cleaned, px, py, meta["w"], meta["h"])
-        q    = meta["question"]
-        scores.setdefault(q, []).append((meta["value"], fill))
+        q = meta["question"]
+        f = meta["field"]
+        if meta["type"] == "answers":
+            scores.setdefault(q, []).append((meta["value"], fill))
+        elif meta["type"] == "metadata":
+            metadata.setdefault(f, []).append((meta["value"], fill))
+
 
     # ── 4. Pick answer per question ──────────────────────────────
-    detected = {}
+    detected_metadata = {}
+    detected_answers = {}
     for q, choices in scores.items():
-        print(f"Q{q}: " + "  ".join(f"{v}={f:.3f}" for v, f in choices))
+        # print(f"Q{q}: " + "  ".join(f"{v}={f:.3f}" for v, f in choices))
         filled = [v for v, f in choices if f >= fill_threshold]
         if len(filled) == 1:
-            detected[q] = filled[0]
+            detected_answers[q] = filled[0]
         elif len(filled) == 0:
-            detected[q] = None           # blank
+            detected_answers[q] = None           # blank
         else:
-            detected[q] = "AMBIGUOUS"    # multiple bubbles marked
+            detected_answers[q] = "AMBIGUOUS"    # multiple bubbles marked
 
-    result: dict = {"answers": detected}
+    for q, choices in metadata.items():
+        filled = [v for v, f in choices if f >= fill_threshold]
+        # print(filled)
+        if len(filled) == 0:
+            detected_metadata[q] = None # blank
+        else:
+            detected_metadata[q] = filled         
+    
+    # print(metadata)
+    # print(detected_metadata)
+    result: dict = {"metadata": detected_metadata, 
+                    "answers": detected_answers}
 
     # ── 5. Score against answer key (optional) ───────────────────
     if answer_key:
         correct  = 0
         results: dict = {}
         for q, expected in answer_key.items():
-            student = detected.get(q)
+            student = detected_answers.get(q)
             ok      = (student == expected)
             if ok:
                 correct += 1
@@ -211,8 +225,6 @@ def debug_view(img, bubble_coordinates, template,
     index = build_bubble_index(template)
 
     for (px, py), meta in zip(bubble_coordinates, index):
-        if meta["field"] not in ANSWER_FIELDS:
-            continue
         cx, cy = int(round(px)), int(round(py))
         hw, hh = meta["w"] // 2, meta["h"] // 2
         fill   = sample_fill(cleaned, px, py, meta["w"], meta["h"])
@@ -227,6 +239,17 @@ def debug_view(img, bubble_coordinates, template,
 # ── Pretty report ─────────────────────────────────────────────────
 
 def print_report(report: dict) -> None:
+    print(f"\n{'─'*42}")
+    if "metadata" in report:
+        for q in report["metadata"].items():
+            print(q)
+    else:
+        print("  Detected answers (no key provided)")
+        print(f"{'─'*42}")
+        for q, ans in sorted(report["answers"].items()):
+            print(f"  Q{q:3d}  {ans or '—'}")
+    print(f"{'─'*42}\n")
+
     print(f"\n{'─'*42}")
     if "score" in report:
         print(f"  Score : {report['score']} / {report['total']}"
@@ -254,7 +277,7 @@ def grading_wrapper(img, answer_key, template, fill_threshold=0.55):
 
 if __name__ == "__main__":
     template_path = "./templates/CMS_mc_template.json"
-    img_path      = "./samples/scans/2B_11.png"
+    img_path      = "./samples/scans/2B_9.png"
     
     template = json.load(open(template_path, "r", encoding="utf-8"))
     img                = cv2.imread(img_path)
@@ -264,6 +287,7 @@ if __name__ == "__main__":
     # Normal grading run
     report = grading(img, bubble_coordinates, template, ANSWER_KEY)
     print_report(report)
+    # print(report)
 
     # Uncomment to visualise fill detection before grading:
-    debug_view(img, bubble_coordinates, template)
+    # debug_view(img, bubble_coordinates, template)
